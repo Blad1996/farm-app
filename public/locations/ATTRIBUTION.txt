@@ -1,0 +1,8 @@
+Location data derived from Countries States Cities Database by dr5hn and contributors.
+Source: https://github.com/dr5hn/countries-states-cities-database
+Release: v5.2.0-export.1
+Download: https://github.com/dr5hn/countries-states-cities-database/releases/download/v5.2.0-export.1/json-countries%2Bstates%2Bcities.json.gz
+License: Open Database License (ODbL) v1.0.
+The derived JSON files in this directory are available under the same license.
+Adaptations: retain country codes/names and region/city IDs/names; group and sort by country/region.
+These geographical data terms do not license the application's inventory records.

@@ -33,6 +33,7 @@ Las pruebas locales ejecutan las migraciones en PostgreSQL con identidades simul
 - Dashboard con métricas, alertas visuales y actividad reciente.
 - Catálogo de productos con SKU, categoría, unidad y stock mínimo.
 - Almacenes y proveedores. Los proveedores se pueden vincular al recibir lotes.
+- País, estado/provincia y ciudad se seleccionan mediante listas dependientes al crear un almacén. Cambiar el país limpia las opciones anteriores. Las categorías de producto también son desplegables. Las ubicaciones existentes conservan su formato y no requieren migración.
 - Recepción, salida y traslado entre almacenes. Las salidas verifican disponibilidad y vencimiento. El saldo y el historial se guardan juntos.
 - Tabla de stock por lote y almacén, búsqueda y exportación CSV de las filas visibles.
 - Alta y acceso con Supabase Auth y Google Authenticator obligatorio. Las políticas de PostgreSQL exigen una sesión `aal2` y limitan el acceso a datos de la empresa del usuario; las operaciones privilegiadas comprueban también el segundo factor.
@@ -46,3 +47,9 @@ npm test
 npm run check
 npm run build
 ```
+
+## Catálogo de ubicaciones
+
+Los archivos públicos de `public/locations/` contienen un catálogo por país derivado de [Countries States Cities Database](https://github.com/dr5hn/countries-states-cities-database), versión `v5.2.0-export.1`. Esos datos derivados se distribuyen bajo ODbL 1.0, con licencia y atribución en esa carpeta. La app descarga únicamente las opciones del país elegido desde su propio servidor. La cobertura depende del catálogo; si no hay ciudades para una región, se guarda la región y el país seleccionados.
+
+Para regenerar la misma versión del catálogo, ejecuta `node scripts/import-locations.mjs`. No requiere claves ni conexión a Supabase.

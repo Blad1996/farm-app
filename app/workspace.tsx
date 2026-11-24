@@ -8,6 +8,7 @@ import { applyDemoMovement, dashboard, day, daysFromNow, displayDate, emptyInven
   number, units, type Inventory, type MoveInput, type Movement, type MovementKind } from './inventory';
 import { supabase } from './supabase';
 import { SignIn } from './auth';
+import LocationFields from './location-fields';
 
 const navigation = [
   { label: 'Overview', icon: LayoutDashboard, id: 'overview' },
@@ -138,6 +139,7 @@ export default function Workspace() {
         } else saveDemo({ ...data, products: [...data.products, product] });
       }
       if (modal === 'warehouse') {
+        if (field(form, 'location_ready') !== 'true') throw new Error('Wait for location options to load and complete your selection, or clear the country.');
         const warehouse = { id: crypto.randomUUID(), name, location: field(form, 'location') };
         if (data.warehouses.some(existing => existing.name.toLowerCase() === name.toLowerCase())) throw new Error('That warehouse name is already in use.');
         if (supabase) {
@@ -300,11 +302,13 @@ export default function Workspace() {
       <Form onSave={submit} action={modal === 'movement' ? 'Save movement' : 'Save'} cancel={() => setModal(null)}>
         {modal === 'product' && <>
           <Field label="Product name" name="name" required maxLength={100} />
-          <div className="form-grid"><Field label="SKU" name="sku" required maxLength={40} /><Field label="Category" name="category" required maxLength={60} /></div>
+          <div className="form-grid"><Field label="SKU" name="sku" required maxLength={40} /><Select label="Category" name="category" required options={[
+            ['', 'Select category'], ...Array.from(new Set(['Grain', 'Seed', 'Inputs', 'Produce', 'Packaging', 'Feed', 'Equipment', 'Other', ...data.products.map(product => product.category)])).sort().map(category => [category, category] as [string, string]),
+          ]} /></div>
           <div className="form-grid"><Select label="Unit" name="unit" options={units.map(unit => [unit, unit])} />
           <Field label="Minimum stock" name="minimum" type="number" min="0" max="999999999" step="0.001" defaultValue="0" required /></div>
         </>}
-        {modal === 'warehouse' && <><Field label="Warehouse name" name="name" required maxLength={100} /><Field label="City and province" name="location" placeholder="Guelph, ON" maxLength={100} /></>}
+        {modal === 'warehouse' && <><Field label="Warehouse name" name="name" required maxLength={100} /><LocationFields /></>}
         {modal === 'supplier' && <><Field label="Supplier name" name="name" required maxLength={100} /><Field label="Email" name="email" type="email" maxLength={150} /></>}
         {modal === 'movement' && <>
           <Select label="Movement type" name="kind" value={moveKind} onChange={value => setMoveKind(value as MovementKind)} options={Object.entries(movementLabels)} />
