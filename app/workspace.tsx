@@ -148,10 +148,13 @@ export default function Workspace() {
         } else saveDemo({ ...data, warehouses: [...data.warehouses, warehouse] });
       }
       if (modal === 'supplier') {
-        const supplier = { id: crypto.randomUUID(), name, email: field(form, 'email') };
+        if (field(form, 'location_ready') !== 'true') throw new Error('Wait for location options to load and complete your selection, or clear the country.');
+        const supplier = { id: crypto.randomUUID(), name, company_name: field(form, 'company_name'), email: field(form, 'email'),
+          phone: field(form, 'phone'), physical_address: field(form, 'physical_address'), location: field(form, 'location') };
         if (data.suppliers.some(existing => existing.name.toLowerCase() === name.toLowerCase())) throw new Error('That supplier name is already in use.');
         if (supabase) {
           const { error } = await supabase.from('suppliers').insert({ ...supplier, company_id: id });
+          if (error?.code === 'PGRST204' || error?.code === '42703') throw new Error('Supplier contact details are not configured yet. Contact your administrator to enable them.');
           if (error) throw error;
         } else saveDemo({ ...data, suppliers: [...data.suppliers, supplier] });
       }
@@ -286,8 +289,10 @@ export default function Workspace() {
             <Item key={item.id} title={item.name} />, item.location || '—', data.stock.filter(stock => stock.warehouse_id === item.id && stock.quantity > 0).length,
           ])} empty="No warehouses match." /></section>}
         {view === 'suppliers' && <section className="panel"><div className="panel-head"><h2>Supplier directory</h2></div>
-          <Table heads={['Supplier', 'Email', 'Linked lots']} rows={data.suppliers.filter(item => matches(item.name, item.email)).map(item => [
-            <Item key={item.id} title={item.name} />, item.email || '—', data.lots.filter(lot => lot.supplier_id === item.id).length,
+          <Table heads={['Supplier', 'Company name', 'Email', 'Phone', 'Physical address', 'Linked lots']} rows={data.suppliers.filter(item => matches(item.name, item.company_name ?? '', item.email, item.phone ?? '', item.physical_address ?? '', item.location ?? '')).map(item => [
+            <Item key={item.id} title={item.name} />, item.company_name || '—', item.email || '—', item.phone || '—',
+            <span key={`address-${item.id}`} className="supplier-address">{[item.physical_address, item.location].filter(Boolean).join('\n') || '—'}</span>,
+            data.lots.filter(lot => lot.supplier_id === item.id).length,
           ])} empty="No suppliers match." /></section>}
       </div>
     </main>
@@ -309,7 +314,14 @@ export default function Workspace() {
           <Field label="Minimum stock" name="minimum" type="number" min="0" max="999999999" step="0.001" defaultValue="0" required /></div>
         </>}
         {modal === 'warehouse' && <><Field label="Warehouse name" name="name" required maxLength={100} /><LocationFields /></>}
-        {modal === 'supplier' && <><Field label="Supplier name" name="name" required maxLength={100} /><Field label="Email" name="email" type="email" maxLength={150} /></>}
+        {modal === 'supplier' && <>
+          <Field label="Supplier name" name="name" required maxLength={100} />
+          <Field label="Company name" name="company_name" autoComplete="organization" maxLength={100} />
+          <div className="form-grid"><Field label="Email" name="email" type="email" autoComplete="email" maxLength={150} />
+            <Field label="Phone" name="phone" type="tel" autoComplete="tel" maxLength={40} placeholder="+1 416 555 0123" /></div>
+          <label className="field"><span>Physical address</span><textarea name="physical_address" autoComplete="street-address" maxLength={300} rows={3} placeholder="Street number, street name, unit or building" /></label>
+          <LocationFields />
+        </>}
         {modal === 'movement' && <>
           <Select label="Movement type" name="kind" value={moveKind} onChange={value => setMoveKind(value as MovementKind)} options={Object.entries(movementLabels)} />
           <Select label="Product" name="product" value={selectedProduct} onChange={setSelectedProduct} options={data.products.map(item => [item.id, `${item.name} · ${item.unit}`])} />

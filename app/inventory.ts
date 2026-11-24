@@ -1,6 +1,6 @@
 export type Product = { id: string; name: string; sku: string; category: string; unit: string; minimum: number };
 export type Warehouse = { id: string; name: string; location: string };
-export type Supplier = { id: string; name: string; email: string };
+export type Supplier = { id: string; name: string; company_name: string; email: string; phone: string; physical_address: string; location: string };
 export type Lot = { id: string; product_id: string; code: string; expires_on: string | null; supplier_id: string | null };
 export type MovementKind = 'receipt' | 'issue' | 'transfer';
 export type Movement = {
@@ -98,8 +98,8 @@ export function makeDemo(): Inventory {
   const products = catalog.map(([name, sku, category, unit, minimum], i) => ({ id: `p${i}`, name, sku, category, unit, minimum }));
   const warehouses = [{ id: 'w0', name: 'Main Warehouse', location: 'Guelph, ON' },
     { id: 'w1', name: 'Cold Storage', location: 'Cambridge, ON' }, { id: 'w2', name: 'West Distribution', location: 'London, ON' }];
-  const suppliers = [{ id: 's0', name: 'Valley Grain Supply', email: 'orders@valleygrain.example' },
-    { id: 's1', name: 'Northern Produce Co.', email: 'sales@northernproduce.example' }];
+  const suppliers = [{ id: 's0', name: 'Valley Grain Supply', company_name: 'Valley Grain Supply', email: 'orders@valleygrain.example', phone: '', physical_address: '', location: 'Guelph, ON, Canada' },
+    { id: 's1', name: 'Northern Produce Co.', company_name: 'Northern Produce Co.', email: 'sales@northernproduce.example', phone: '', physical_address: '', location: 'Cambridge, ON, Canada' }];
   const lots = products.map((product, i) => ({ id: `l${i}`, product_id: product.id, code: `LOT-${1041 + i}`,
     expires_on: i === 2 ? daysFromNow(13) : i === 5 ? daysFromNow(24) : null, supplier_id: i === 5 ? 's1' : 's0' }));
   const stock = lots.map((lot, i) => ({ lot_id: lot.id, warehouse_id: i === 5 ? 'w1' : i === 6 ? 'w2' : 'w0', quantity: catalog[i][5] }));

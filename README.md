@@ -33,6 +33,7 @@ Las pruebas locales ejecutan las migraciones en PostgreSQL con identidades simul
 - Dashboard con métricas, alertas visuales y actividad reciente.
 - Catálogo de productos con SKU, categoría, unidad y stock mínimo.
 - Almacenes y proveedores. Los proveedores se pueden vincular al recibir lotes.
+- Los proveedores incluyen nombre de empresa, teléfono, dirección física y ubicación mediante las listas de país, provincia/estado y ciudad. Para habilitar esos campos en una base existente, aplica `supabase/migrations/20261124010000_supplier_details.sql` después de las migraciones anteriores. Los proveedores existentes se conservan.
 - País, estado/provincia y ciudad se seleccionan mediante listas dependientes al crear un almacén. Cambiar el país limpia las opciones anteriores. Las categorías de producto también son desplegables. Las ubicaciones existentes conservan su formato y no requieren migración.
 - Recepción, salida y traslado entre almacenes. Las salidas verifican disponibilidad y vencimiento. El saldo y el historial se guardan juntos.
 - Tabla de stock por lote y almacén, búsqueda y exportación CSV de las filas visibles.

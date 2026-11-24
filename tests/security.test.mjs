@@ -41,6 +41,21 @@ test('PostgreSQL enforces MFA, tenant isolation and atomic inventory writes', as
     const company = (await db.query("select public.create_inventory_company('Farm A') as company")).rows[0].company.id;
     const product = (await db.query("insert into public.products (company_id,name,sku,category,unit) values ($1,'Rice','RICE','Grain','kg') returning id", [company])).rows[0].id;
     const warehouse = (await db.query("insert into public.warehouses (company_id,name) values ($1,'Main') returning id", [company])).rows[0].id;
+    const legacySupplier = (await db.query("insert into public.suppliers (company_id,name,email) values ($1,'Existing supplier','existing@example.test') returning id", [company])).rows[0].id;
+    await db.exec('reset role');
+    await db.exec(await readFile(new URL('../supabase/migrations/20261124010000_supplier_details.sql', import.meta.url), 'utf8'));
+    await asUser(owner, 'aal2');
+    const preservedSupplier = (await db.query('select * from public.suppliers where id=$1', [legacySupplier])).rows[0];
+    assert.equal(preservedSupplier.name, 'Existing supplier');
+    for (const key of ['company_name', 'phone', 'physical_address', 'location']) assert.equal(preservedSupplier[key], '', `legacy ${key} defaults to empty`);
+    await db.query(`insert into public.suppliers (company_id,name,company_name,email,phone,physical_address,location)
+      values ($1,'Sales contact','Farm Supply Ltd.','sales@example.test','+1 416 555 0123','42 Farm Road\nUnit 2','Guelph, Ontario, Canada')`, [company]);
+    const supplierSnapshot = (await db.query('select public.inventory_snapshot($1) as snapshot', [company])).rows[0].snapshot.suppliers.find(supplier => supplier.name === 'Sales contact');
+    assert.equal(supplierSnapshot.company_name, 'Farm Supply Ltd.');
+    assert.equal(supplierSnapshot.phone, '+1 416 555 0123');
+    assert.equal(supplierSnapshot.physical_address, '42 Farm Road\nUnit 2');
+    assert.equal(supplierSnapshot.location, 'Guelph, Ontario, Canada');
+    await assert.rejects(db.query("insert into public.suppliers (company_id,name,phone) values ($1,'Invalid contact',$2)", [company, '1'.repeat(41)]), /check constraint/);
     const move = { id: '00000000-0000-4000-8000-000000000003', kind: 'receipt', product_id: product, lot_code: 'LOT-1', warehouse_id: warehouse, quantity: 20 };
     const post = input => db.query('select public.post_inventory_movement($1,$2::jsonb)', [company, JSON.stringify(input)]);
 
@@ -54,6 +69,8 @@ test('PostgreSQL enforces MFA, tenant isolation and atomic inventory writes', as
 
     await asUser(stranger, 'aal2');
     assert.deepEqual((await db.query('select * from public.companies')).rows, []);
+    assert.deepEqual((await db.query('select * from public.suppliers')).rows, [], 'supplier contact details stay private to their company');
+    await assert.rejects(db.query("insert into public.suppliers (company_id,name,phone) values ($1,'Foreign supplier','123')", [company]), /row-level security/);
     await assert.rejects(post(move), /do not have access/);
     await assert.rejects(db.query("insert into public.warehouses (company_id,name) values ($1,'Foreign')", [company]), /row-level security/);
 
