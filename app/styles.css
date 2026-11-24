@@ -110,6 +110,14 @@ fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
 .field input, .field select, .field textarea { width: 100%; min-width: 0; padding: 8px 9px; border: 1px solid #cddbd0; border-radius: 7px; font-weight: 400; color: var(--ink); background: white; }
 .field textarea { font-family: inherit; resize: vertical; }
 .supplier-address { display: block; min-width: 180px; max-width: 300px; white-space: pre-line; overflow-wrap: anywhere; }
+.purchase-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.purchase-toolbar p { margin: 6px 0 0; color: var(--muted); }
+.purchase-filter { max-width: 240px; }
+.purchase-empty { padding: 24px; }
+.purchase-details { margin-top: 20px; }
+.purchase-notes { padding: 0 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.purchase-dialog { width: min(680px, calc(100vw - 32px)); }
+.purchase-line { padding: 14px; margin: 12px 0; border: 1px solid #dce5de; border-radius: 8px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .form-actions { justify-content: flex-end; margin-top: 6px; }
 .error { color: #9b2c26; font-size: .88rem; margin: 4px 0 12px; }

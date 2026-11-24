@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Boxes, CalendarDays, CircleHelp,
-  Clock3, Download, LayoutDashboard, Leaf, LogOut, Menu, Package, Plus, Search, Truck, Warehouse, X } from 'lucide-react';
+  Clock3, Download, LayoutDashboard, Leaf, LogOut, Menu, Package, Plus, Search, ShoppingCart, Truck, Warehouse, X } from 'lucide-react';
 import { applyDemoMovement, dashboard, day, daysFromNow, displayDate, emptyInventory, makeDemo, movementLabels,
   number, units, type Inventory, type MoveInput, type Movement, type MovementKind } from './inventory';
 import { supabase } from './supabase';
 import { SignIn } from './auth';
 import LocationFields from './location-fields';
+import PurchaseOrders from './purchase-orders';
 
 const navigation = [
   { label: 'Overview', icon: LayoutDashboard, id: 'overview' },
@@ -16,6 +17,7 @@ const navigation = [
   { label: 'Movements', icon: ArrowLeftRight, id: 'movements' },
   { label: 'Warehouses', icon: Warehouse, id: 'warehouses' },
   { label: 'Suppliers', icon: Truck, id: 'suppliers' },
+  { label: 'Purchase Orders', icon: ShoppingCart, id: 'purchases' },
 ] as const;
 type View = typeof navigation[number]['id'];
 type Modal = 'movement' | 'product' | 'warehouse' | 'supplier' | 'help';
@@ -207,6 +209,7 @@ export default function Workspace() {
     movements: ['Stock movements', 'Review receipts, issues, and warehouse transfers.'],
     warehouses: ['Warehouses', 'Manage the locations where inventory is stored.'],
     suppliers: ['Suppliers', 'Keep supplier contacts linked to incoming lots.'],
+    purchases: ['Purchase Orders', 'Order from suppliers and receive deliveries into inventory.'],
   };
   const modalTitles = { movement: 'Record movement', product: 'Add product', warehouse: 'Add warehouse', supplier: 'Add supplier', help: 'Getting started' };
   const movementRows = data.movements.filter(move => {
@@ -239,8 +242,8 @@ export default function Workspace() {
       <div className="content">
         <header className="page-head"><div><h1>{headings[view][0]}</h1><p>{headings[view][1]}</p></div>
           <div className="actions">{view === 'inventory' && <button className="button secondary" onClick={downloadInventory}><Download size={17} />Export CSV</button>}
-            <button className="button" onClick={() => open(view === 'inventory' ? 'product' : view === 'warehouses' ? 'warehouse' : view === 'suppliers' ? 'supplier' : 'movement')}>
-              <Plus size={19} />{view === 'inventory' ? 'Add product' : view === 'warehouses' ? 'Add warehouse' : view === 'suppliers' ? 'Add supplier' : 'Record movement'}</button></div></header>
+            {view !== 'purchases' && <button className="button" onClick={() => open(view === 'inventory' ? 'product' : view === 'warehouses' ? 'warehouse' : view === 'suppliers' ? 'supplier' : 'movement')}>
+              <Plus size={19} />{view === 'inventory' ? 'Add product' : view === 'warehouses' ? 'Add warehouse' : view === 'suppliers' ? 'Add supplier' : 'Record movement'}</button>}</div></header>
         {notice && <div className="notice" role="status">{notice}<button className="icon-button" aria-label="Dismiss notice" onClick={() => setNotice('')}><X size={16} /></button></div>}
 
         {view === 'overview' && <>
@@ -269,6 +272,9 @@ export default function Workspace() {
             <MovementTable data={data} rows={data.movements.slice(0, 5)} /></section>
         </>}
         {view !== 'overview' && <div className="search"><Search size={18} /><input type="search" aria-label="Filter records" placeholder="Search records…" value={query} onChange={event => setQuery(event.target.value)} /></div>}
+        {view === 'purchases' && <PurchaseOrders companyId={company?.id ?? null} inventory={data} query={query} refreshInventory={async () => {
+          if (company) setData(await loadCompany(company.id));
+        }} />}
         {view === 'inventory' && <>
           <section className="panel page-panel"><div className="panel-head"><div><h2>Stock by lot</h2><p>On-hand balances with positive stock</p></div></div>
             <Table heads={['Product', 'Lot', 'Warehouse', 'On hand', 'Expiry']} rows={stockRows.map(row => [

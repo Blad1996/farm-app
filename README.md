@@ -34,12 +34,21 @@ Las pruebas locales ejecutan las migraciones en PostgreSQL con identidades simul
 - Catálogo de productos con SKU, categoría, unidad y stock mínimo.
 - Almacenes y proveedores. Los proveedores se pueden vincular al recibir lotes.
 - Los proveedores incluyen nombre de empresa, teléfono, dirección física y ubicación mediante las listas de país, provincia/estado y ciudad. Para habilitar esos campos en una base existente, aplica `supabase/migrations/20261124010000_supplier_details.sql` después de las migraciones anteriores. Los proveedores existentes se conservan.
+- **Purchase Orders:** pedidos de varios productos con proveedor, almacén receptor, fecha esperada, moneda, cantidades, precios unitarios y notas. Borrador, confirmación, recepción parcial/completa y cancelación de cantidades pendientes. Las recepciones por lote generan entradas de inventario y conservan un historial con vencimientos y referencias.
 - País, estado/provincia y ciudad se seleccionan mediante listas dependientes al crear un almacén. Cambiar el país limpia las opciones anteriores. Las categorías de producto también son desplegables. Las ubicaciones existentes conservan su formato y no requieren migración.
 - Recepción, salida y traslado entre almacenes. Las salidas verifican disponibilidad y vencimiento. El saldo y el historial se guardan juntos.
 - Tabla de stock por lote y almacén, búsqueda y exportación CSV de las filas visibles.
 - Alta y acceso con Supabase Auth y Google Authenticator obligatorio. Las políticas de PostgreSQL exigen una sesión `aal2` y limitan el acceso a datos de la empresa del usuario; las operaciones privilegiadas comprueban también el segundo factor.
 
-El piloto usa un espacio de trabajo por cuenta en la interfaz. El esquema admite operadores, pero las invitaciones y la gestión de roles desde la interfaz están pendientes. Las salidas del modo conectado evalúan el vencimiento según la fecha de Toronto. El historial visible muestra hasta 500 movimientos recientes. Las órdenes de compra y la trazabilidad hasta el cliente final quedan para una fase posterior.
+El piloto usa un espacio de trabajo por cuenta en la interfaz. El esquema admite operadores, pero las invitaciones y la gestión de roles desde la interfaz están pendientes. Las salidas del modo conectado evalúan el vencimiento según la fecha de Toronto. El historial de movimientos muestra hasta 500 registros recientes; el historial propio de recepciones conserva el vínculo con sus lotes. La trazabilidad hasta el cliente final queda para una fase posterior.
+
+## Activar Purchase Orders
+
+Aplica `supabase/migrations/20261124020000_purchase_orders.sql` después de las migraciones existentes. No vuelve a crear ni elimina datos de inventario. Si el módulo muestra que no está configurado, falta esa migración. La clave pública de la app no puede aplicar cambios de esquema; se requiere el SQL Editor o un acceso administrativo autorizado de Supabase.
+
+En **Purchase Orders**, pulsa **Create purchase order**, elige proveedor y almacén, agrega las líneas y guarda el borrador. Abre el pedido, pulsa **Confirm order** y usa **Receive** en cada línea para registrar la cantidad entregada, lote y vencimiento. Puedes recibir una línea en varios lotes o entregas. Los estados y saldos se calculan en PostgreSQL, y los reintentos no duplican las recepciones. Una recepción que excede el saldo o falla al crear el lote no modifica el pedido ni las existencias.
+
+Los administradores crean, confirman y cancelan pedidos; administradores y operadores pueden recibirlos. Todas las operaciones exigen MFA y pertenencia a la empresa. La cancelación requiere un motivo y conserva lo ya recibido. Las tablas no permiten escrituras directas desde el cliente. Los totales son antes de impuestos, envío y descuentos, y no actualizan una valoración contable del inventario. Confirmar un pedido no envía mensajes al proveedor. Los borradores se revisan antes de confirmar; para sustituir uno, cancélalo y crea otro.
 
 ## Verificación
 
