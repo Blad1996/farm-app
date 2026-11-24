@@ -27,23 +27,23 @@ export function SignIn() {
         ? await supabase.auth.signUp({ ...credentials, options: { emailRedirectTo: window.location.origin } })
         : await supabase.auth.signInWithPassword(credentials);
       if (response.error) {
-        setError(register ? 'No se pudo crear la cuenta. Revisa los datos o intenta iniciar sesión.' : 'No se pudo iniciar sesión. Revisa el correo, la contraseña y la confirmación de tu correo.');
+        setError(register ? 'Unable to create your account. Check your details or try signing in.' : 'Unable to sign in. Check your email, password, and email confirmation.');
       } else if (register && !response.data.session) {
-        setMessage('Revisa tu correo y confirma la cuenta. Luego vuelve para iniciar sesión.');
+        setMessage('Check your email to confirm your account, then return to sign in.');
       }
-    } catch { setError('No se pudo conectar. Inténtalo de nuevo.'); }
+    } catch { setError('Unable to connect. Please try again.'); }
     finally { setBusy(false); }
   }
-  return <AuthCard><h1>{register ? 'Crea tu cuenta' : 'Inicia sesión'}</h1>
-    <p>Ingresa con tu correo y contraseña. Después verificaremos tu código de Google Authenticator.</p>
+  return <AuthCard><h1>{register ? 'Create your account' : 'Sign in'}</h1>
+    <p>Sign in with your email and password, then enter your Google Authenticator code.</p>
     <form onSubmit={submit}><fieldset disabled={busy}>
-      <label className="field"><span>Correo electrónico</span><input name="email" type="email" autoComplete="email" required maxLength={254} /></label>
-      <label className="field"><span>Contraseña</span><input name="password" type="password" autoComplete={register ? 'new-password' : 'current-password'} required minLength={register ? 12 : undefined} maxLength={128} /></label>
-      {register && <p>Usa al menos 12 caracteres y una contraseña que no utilices en otros sitios.</p>}
-      <div className="form-actions"><button className="button">{busy ? 'Espera…' : register ? 'Crear cuenta' : 'Entrar'}</button></div>
+      <label className="field"><span>Email</span><input name="email" type="email" autoComplete="email" required maxLength={254} /></label>
+      <label className="field"><span>Password</span><input name="password" type="password" autoComplete={register ? 'new-password' : 'current-password'} required minLength={register ? 12 : undefined} maxLength={128} /></label>
+      {register && <p>Use at least 12 characters and a password you do not use on other sites.</p>}
+      <div className="form-actions"><button className="button">{busy ? 'Please wait…' : register ? 'Create account' : 'Sign in'}</button></div>
     </fieldset></form>
     {error && <p className="error" role="alert">{error}</p>}{message && <p role="status">{message}</p>}
-    <button className="text-button" disabled={busy} onClick={() => { setRegister(!register); setError(''); setMessage(''); }}>{register ? 'Ya tengo cuenta' : 'Crear una cuenta'}</button>
+    <button className="text-button" disabled={busy} onClick={() => { setRegister(!register); setError(''); setMessage(''); }}>{register ? 'Already have an account? Sign in' : 'Create an account'}</button>
   </AuthCard>;
 }
 
@@ -61,10 +61,10 @@ function SecondFactor({ onVerified }: { onVerified: () => void }) {
     setLoading(true); setError('');
     supabase!.auth.mfa.listFactors().then(({ data, error }) => {
       if (cancelled) return;
-      if (error) setError('No se pudieron consultar tus métodos de verificación.');
+      if (error) setError('Unable to load your verification methods.');
       else setFactorId(data.totp.find(factor => factor.status === 'verified')?.id ?? '');
       setLoading(false);
-    }).catch(() => { if (!cancelled) { setError('No se pudo conectar.'); setLoading(false); } });
+    }).catch(() => { if (!cancelled) { setError('Unable to connect.'); setLoading(false); } });
     return () => { cancelled = true; };
   }, [retry]);
 
@@ -84,7 +84,7 @@ function SecondFactor({ onVerified }: { onVerified: () => void }) {
       const result = await supabase.auth.mfa.enroll({ factorType: 'totp', issuer: 'Agro Inventory', friendlyName: 'Google Authenticator' });
       if (result.error) throw result.error;
       setFactorId(result.data.id); setQr(result.data.totp.qr_code); setSecret(result.data.totp.secret);
-    } catch { setError('No se pudo preparar el autenticador. Inténtalo de nuevo.'); }
+    } catch { setError('Unable to set up your authenticator. Please try again.'); }
     finally { actionLock.current = false; setBusy(false); }
   }
 
@@ -93,37 +93,37 @@ function SecondFactor({ onVerified }: { onVerified: () => void }) {
     if (actionLock.current || !supabase) return;
     const form = event.currentTarget;
     const code = String(new FormData(form).get('code') ?? '').trim();
-    if (!/^\d{6}$/.test(code)) { setError('Introduce los seis dígitos del autenticador.'); return; }
+    if (!/^\d{6}$/.test(code)) { setError('Enter the six-digit code from your authenticator.'); return; }
     actionLock.current = true; setBusy(true); setError('');
     try {
       const result = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
       form.reset();
-      if (result.error) { setError('Código incorrecto o vencido. Usa el código actual del autenticador.'); return; }
+      if (result.error) { setError('Invalid or expired code. Enter the current code from your authenticator.'); return; }
       setQr(''); setSecret(''); onVerified();
-    } catch { setError('No se pudo verificar. Inténtalo de nuevo.'); }
+    } catch { setError('Unable to verify your code. Please try again.'); }
     finally { actionLock.current = false; setBusy(false); }
   }
   return <AuthCard><ShieldCheck className="auth-shield" aria-hidden="true" />
-    <h1>{qr || !factorId ? 'Activa la verificación en dos pasos' : 'Verifica tu acceso'}</h1>
-    {loading ? <p role="status">Comprobando tu autenticador…</p> : <>
-      {!factorId && !error && <><p>Abre Google Authenticator en tu teléfono. Vincúlalo para proteger tu inventario.</p>
-        <button className="button" disabled={busy} onClick={() => void enroll()}>{busy ? 'Preparando…' : 'Vincular Google Authenticator'}</button></>}
-      {qr && <><p>En Google Authenticator, pulsa + y escanea este QR.</p>
-        <img className="auth-qr" src={qr} width={240} height={240} alt="QR para vincular tu cuenta con el autenticador" />
-        <details><summary>Introducir la clave manualmente</summary><code className="auth-secret">{secret}</code></details>
-        <p>No compartas este QR ni la clave. Conserva el acceso a tu autenticador para futuros inicios de sesión.</p></>}
+    <h1>{qr || !factorId ? 'Set up two-step verification' : 'Verify your sign-in'}</h1>
+    {loading ? <p role="status">Checking your authenticator…</p> : <>
+      {!factorId && !error && <><p>Open Google Authenticator on your phone and link it to protect your inventory.</p>
+        <button className="button" disabled={busy} onClick={() => void enroll()}>{busy ? 'Setting up…' : 'Link Google Authenticator'}</button></>}
+      {qr && <><p>In Google Authenticator, tap + and scan this QR code.</p>
+        <img className="auth-qr" src={qr} width={240} height={240} alt="QR code to link your account to your authenticator" />
+        <details><summary>Enter the setup key manually</summary><code className="auth-secret">{secret}</code></details>
+        <p>Do not share this QR code or setup key. Keep access to your authenticator for future sign-ins.</p></>}
       {factorId && <form onSubmit={verify}><fieldset disabled={busy}>
-        <label className="field"><span>Código de Google Authenticator</span><input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required autoFocus /></label>
-        <div className="form-actions"><button className="button">{busy ? 'Verificando…' : 'Verificar y entrar'}</button></div>
+        <label className="field"><span>Google Authenticator code</span><input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required autoFocus /></label>
+        <div className="form-actions"><button className="button">{busy ? 'Verifying…' : 'Verify and sign in'}</button></div>
       </fieldset></form>}
       {error && <p className="error" role="alert">{error}</p>}
-      {error && !factorId && <button className="text-button" disabled={busy} onClick={() => setRetry(retry + 1)}>Reintentar</button>}
+      {error && !factorId && <button className="text-button" disabled={busy} onClick={() => setRetry(retry + 1)}>Try again</button>}
     </>}
-    <p>Si perdiste el autenticador, contacta al administrador para recuperar tu acceso.</p>
+    <p>If you have lost access to your authenticator, contact your administrator to recover your account.</p>
     <button className="text-button" disabled={busy} onClick={async () => {
       const result = await supabase!.auth.signOut();
-      if (result.error) setError('No se pudo cerrar la sesión. Inténtalo de nuevo.');
-    }}>Cerrar sesión</button>
+      if (result.error) setError('Unable to sign out. Please try again.');
+    }}>Sign out</button>
   </AuthCard>;
 }
 
@@ -148,25 +148,25 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     if (!supabase || !token) { setVerifiedToken(''); setCheckedToken(''); return; }
     supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(async ({ data, error }) => {
       if (cancelled) return;
-      if (error) { setError('No se pudo comprobar la seguridad de tu sesión.'); return; }
+      if (error) { setError('Unable to check your session security.'); return; }
       if (data.currentLevel === 'aal2') {
         const status = await supabase!.rpc('inventory_security_status');
         if (cancelled) return;
         if (status.error || status.data !== true) {
-          setError('La protección de la base de datos no está lista. El administrador debe aplicar la migración de verificación en dos pasos.');
+          setError('Database security setup is incomplete. Your administrator must apply the two-step verification migration.');
           return;
         }
       }
       setVerifiedToken(data.currentLevel === 'aal2' ? token : ''); setCheckedToken(token);
-    }).catch(() => { if (!cancelled) setError('No se pudo comprobar tu sesión.'); });
+    }).catch(() => { if (!cancelled) setError('Unable to check your session.'); });
     return () => { cancelled = true; };
   }, [token, revision]);
 
-  if (!supabase) return <AuthCard><h1>Acceso pendiente de configuración</h1><p>Falta conectar Supabase para habilitar el inicio de sesión y la verificación en dos pasos. Contacta al administrador.</p></AuthCard>;
-  if (!ready) return <AuthCard><p role="status">Comprobando sesión…</p></AuthCard>;
+  if (!supabase) return <AuthCard><h1>Account access is not configured</h1><p>Connect Supabase to enable sign-in and two-step verification. Contact your administrator.</p></AuthCard>;
+  if (!ready) return <AuthCard><p role="status">Checking your session…</p></AuthCard>;
   if (!session) return <SignIn />;
-  if (error) return <AuthCard><p role="alert">{error}</p><button className="button" onClick={() => setRevision(revision + 1)}>Reintentar</button></AuthCard>;
-  if (checkedToken !== token) return <AuthCard><p role="status">Comprobando verificación en dos pasos…</p></AuthCard>;
+  if (error) return <AuthCard><p role="alert">{error}</p><button className="button" onClick={() => setRevision(revision + 1)}>Try again</button></AuthCard>;
+  if (checkedToken !== token) return <AuthCard><p role="status">Checking two-step verification…</p></AuthCard>;
   if (verifiedToken !== token) return <SecondFactor key={session.user.id} onVerified={() => setRevision(revision + 1)} />;
   return children;
 }
