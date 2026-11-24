@@ -7,6 +7,7 @@ import { ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Boxes, Calenda
 import { applyDemoMovement, dashboard, day, daysFromNow, displayDate, emptyInventory, makeDemo, movementLabels,
   number, units, type Inventory, type MoveInput, type Movement, type MovementKind } from './inventory';
 import { supabase } from './supabase';
+import { SignIn } from './auth';
 
 const navigation = [
   { label: 'Overview', icon: LayoutDashboard, id: 'overview' },
@@ -409,25 +410,4 @@ function Select({ label, name, options, required, value, onChange }: {
   return <label className="field"><span>{label}</span><select name={name} required={required} value={value}
     onChange={onChange ? event => onChange(event.target.value) : undefined}>
     {options.map(([key, text]) => <option value={key} key={key}>{text}</option>)}</select></label>;
-}
-
-function SignIn() {
-  const [register, setRegister] = useState(false);
-  const [message, setMessage] = useState('');
-  async function auth(form: FormData) {
-    const credentials = { email: field(form, 'email'), password: String(form.get('password') ?? '') };
-    setMessage('');
-    const response = register
-      ? await supabase!.auth.signUp({ ...credentials, options: { emailRedirectTo: window.location.origin } })
-      : await supabase!.auth.signInWithPassword(credentials);
-    if (response.error) throw response.error;
-    if (register && !response.data.session) setMessage('Check your email for the confirmation link, then return to sign in.');
-  }
-  return <div className="auth-shell"><section className="auth-card"><Brand /><h1>{register ? 'Create an account' : 'Sign in'}</h1><p>Access your inventory workspace.</p>
-    <Form key={String(register)} onSave={auth} action={register ? 'Create account' : 'Sign in'}>
-      <Field label="Email" name="email" type="email" autoComplete="email" required />
-      <Field label="Password" name="password" type="password" autoComplete={register ? 'new-password' : 'current-password'} required minLength={register ? 8 : undefined} />
-    </Form>{message && <p role="status">{message}</p>}
-    <button className="text-button" onClick={() => { setRegister(!register); setMessage(''); }}>{register ? 'Already have an account? Sign in' : 'Create an account'}</button>
-  </section></div>;
 }
