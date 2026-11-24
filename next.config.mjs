@@ -5,7 +5,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${production ? '' : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob: ${origin}`,
   "font-src 'self'",
   `connect-src 'self' ${origin}${production ? '' : ' ws://localhost:* ws://127.0.0.1:*'}`,
   "object-src 'none'",

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
+import { mockStorage } from './helpers/storage.mjs';
 
 test('purchase order lifecycle and database authorization', async t => {
   const db = new PGlite();
@@ -16,6 +17,7 @@ test('purchase order lifecycle and database authorization', async t => {
       create function auth.uid() returns uuid language sql stable as $$ select (auth.jwt()->>'sub')::uuid $$;
       grant usage on schema auth,public to anon,authenticated;
       grant execute on function auth.jwt(),auth.uid() to anon,authenticated;`);
+    await mockStorage(db);
     const directory = new URL('../supabase/migrations/', import.meta.url);
     for (const migration of (await readdir(directory)).filter(name => name.endsWith('.sql')).sort()) {
       await db.exec(await readFile(new URL(migration, directory), 'utf8'));

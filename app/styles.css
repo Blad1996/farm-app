@@ -121,6 +121,14 @@ fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
 .purchase-line { padding: 14px; margin: 12px 0; border: 1px solid #dce5de; border-radius: 8px; }
 .purchase-setup { display: grid; gap: 12px; margin-top: 18px; }
 .purchase-setup-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.csv-dialog { width: min(820px, calc(100vw - 32px)); }
+.csv-dialog > p { margin-bottom: 14px; }
+.csv-dialog > a { margin-bottom: 16px; }
+.csv-dialog .table-wrap { margin: 16px 0; }
+.field-help { font-size: .85rem; color: var(--muted); line-height: 1.5; margin: 0 0 14px; }
+.product-thumbnail { position: relative; display: grid; place-items: center; width: 52px; height: 52px; background: #edf3ee; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.product-thumbnail img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.product-photo-preview { display: block; max-width: 100%; width: 220px; max-height: 220px; object-fit: contain; margin: 12px 0; border: 1px solid var(--line); border-radius: 8px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .form-actions { justify-content: flex-end; margin-top: 6px; }
 .error { color: #9b2c26; font-size: .88rem; margin: 4px 0 12px; }

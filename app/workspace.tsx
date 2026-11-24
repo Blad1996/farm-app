@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Boxes, CalendarDays, CircleHelp,
-  Clock3, Download, LayoutDashboard, Leaf, LogOut, Menu, Package, Plus, Search, ShoppingCart, Truck, Warehouse, X } from 'lucide-react';
+  Clock3, Download, LayoutDashboard, Leaf, LogOut, Menu, Package, Plus, Search, ShoppingCart, Truck, Upload, Warehouse, X } from 'lucide-react';
 import { applyDemoMovement, dashboard, day, daysFromNow, displayDate, emptyInventory, makeDemo, movementLabels,
-  number, units, type Inventory, type MoveInput, type Movement, type MovementKind } from './inventory';
+  number, units, type Inventory, type MoveInput, type Movement, type MovementKind, type Product } from './inventory';
 import { supabase } from './supabase';
 import { SignIn } from './auth';
 import LocationFields from './location-fields';
 import PurchaseOrders from './purchase-orders';
+import ProductCsvImport from './product-csv-import';
+import { ProductPhotoDialog, ProductPhotoInput, ProductThumbnail, prepareProductPhoto, uploadProductPhoto, useProductPhotoUrls } from './product-photos';
 
 const navigation = [
   { label: 'Overview', icon: LayoutDashboard, id: 'overview' },
@@ -41,6 +43,9 @@ export default function Workspace() {
   const [moveKind, setMoveKind] = useState<MovementKind>('receipt');
   const [selectedProduct, setSelectedProduct] = useState('');
   const [requestId, setRequestId] = useState('');
+  const [importOpen, setImportOpen] = useState(false);
+  const [photoProduct, setPhotoProduct] = useState<Product | null>(null);
+  const photoUrls = useProductPhotoUrls(data.products);
   const userId = session?.user.id;
 
   useEffect(() => {
@@ -115,6 +120,7 @@ export default function Workspace() {
 
   async function submit(form: FormData) {
     const id = company?.id;
+    let savedNotice = 'Saved successfully.';
     if (supabase && !id) throw new Error('Open a workspace first.');
     if (modal === 'movement') {
       const move: MoveInput = {
@@ -135,9 +141,16 @@ export default function Workspace() {
           unit: field(form, 'unit'), category: field(form, 'category'), minimum: Number(field(form, 'minimum') || 0) };
         if (!product.sku || !product.category) throw new Error('Enter a SKU and category.');
         if (data.products.some(existing => existing.sku === product.sku)) throw new Error('That SKU is already in use.');
+        const photoFile = form.get('product_photo');
+        const photo = photoFile instanceof File && photoFile.size ? await prepareProductPhoto(photoFile) : null;
+        if (photo && !supabase) throw new Error('Connect Supabase to upload product photos.');
         if (supabase) {
           const { error } = await supabase.from('products').insert({ ...product, company_id: id });
           if (error) throw error;
+          if (photo) {
+            try { await uploadProductPhoto(id!, product.id, photo); }
+            catch { savedNotice = 'Product saved. The photo could not be uploaded. Use Add photo in the catalogue to try again.'; }
+          }
         } else saveDemo({ ...data, products: [...data.products, product] });
       }
       if (modal === 'warehouse') {
@@ -162,10 +175,10 @@ export default function Workspace() {
       }
     }
     setModal(null);
-    setNotice('Saved successfully.');
+    setNotice(savedNotice);
     if (supabase && id) {
       try { setData(await loadCompany(id)); }
-      catch { setNotice('Saved. Reload the page to refresh the workspace.'); }
+      catch { setNotice(`${savedNotice} Reload the page to refresh the workspace.`); }
     }
   }
 
@@ -241,7 +254,9 @@ export default function Workspace() {
         <span className="today"><CalendarDays size={16} />{displayDate(day())}</span></div>
       <div className="content">
         <header className="page-head"><div><h1>{headings[view][0]}</h1><p>{headings[view][1]}</p></div>
-          <div className="actions">{view === 'inventory' && <button className="button secondary" onClick={downloadInventory}><Download size={17} />Export CSV</button>}
+          <div className="actions">{view === 'inventory' && <>
+            <button className="button secondary" onClick={() => setImportOpen(true)}><Upload size={17} />Import CSV</button>
+            <button className="button secondary" onClick={downloadInventory}><Download size={17} />Export CSV</button></>}
             {view !== 'purchases' && <button className="button" onClick={() => open(view === 'inventory' ? 'product' : view === 'warehouses' ? 'warehouse' : view === 'suppliers' ? 'supplier' : 'movement')}>
               <Plus size={19} />{view === 'inventory' ? 'Add product' : view === 'warehouses' ? 'Add warehouse' : view === 'suppliers' ? 'Add supplier' : 'Record movement'}</button>}</div></header>
         {notice && <div className="notice" role="status">{notice}<button className="icon-button" aria-label="Dismiss notice" onClick={() => setNotice('')}><X size={16} /></button></div>}
@@ -283,9 +298,11 @@ export default function Workspace() {
               row.lot.expires_on ? <span key={row.lot.id} className={row.lot.expires_on <= daysFromNow(30) ? 'tag peach' : ''}>{displayDate(row.lot.expires_on)}</span> : '—',
             ])} empty="No stock matches. Record a receipt to add stock." /></section>
           <section className="panel page-panel"><div className="panel-head"><h2>Product catalogue</h2></div>
-            <Table heads={['Product', 'Category', 'On hand', 'Minimum']} rows={products.map(product => [
+            <Table heads={['Photo', 'Product', 'Category', 'On hand', 'Minimum', 'Photo options']} rows={products.map(product => [
+              <ProductThumbnail key={`photo-${product.id}`} product={product} url={product.photo_path ? photoUrls[product.photo_path] : undefined} />,
               <Item key={product.id} title={product.name} subtitle={product.sku} />, product.category,
               `${number.format(stats.onHand(product.id))} ${product.unit}`, `${number.format(product.minimum)} ${product.unit}`,
+              <button key={`photo-action-${product.id}`} className="button secondary small" onClick={() => setPhotoProduct(product)}>{product.photo_path ? 'Change photo' : 'Add photo'}</button>,
             ])} empty="No products match." /></section>
         </>}
         {view === 'movements' && <section className="panel"><div className="panel-head"><div><h2>Movement history</h2><p>Most recent transactions, up to 500</p></div></div>
@@ -303,6 +320,20 @@ export default function Workspace() {
       </div>
     </main>
 
+    {importOpen && <ProductCsvImport companyId={company?.id ?? null} products={data.products} close={() => setImportOpen(false)} onImported={async count => {
+      setNotice(`${count} products imported successfully.`);
+      if (company) {
+        try { setData(await loadCompany(company.id)); }
+        catch { setNotice(`${count} products imported. Reload the page to refresh the catalogue.`); }
+      }
+    }} />}
+    {photoProduct && <ProductPhotoDialog companyId={company?.id ?? null} product={photoProduct} close={() => setPhotoProduct(null)} refresh={async () => {
+      setNotice('Product photo updated.');
+      if (company) {
+        try { setData(await loadCompany(company.id)); }
+        catch { setNotice('Product photo saved. Reload the page to refresh the catalogue.'); }
+      }
+    }} />}
     {modal && <Dialog title={modalTitles[modal]} close={() => setModal(null)}>
       {modal === 'help' ? <><p>{supabase ? 'Add a product and a warehouse, then record a receipt to create your first lot.' : 'This demonstration uses sample inventory. Your changes are saved in this browser.'}</p>
         <p>Receipts add stock. Issues reduce stock. Transfers move a lot between warehouses.</p></> :
@@ -318,6 +349,7 @@ export default function Workspace() {
           ]} /></div>
           <div className="form-grid"><Select label="Unit" name="unit" options={units.map(unit => [unit, unit])} />
           <Field label="Minimum stock" name="minimum" type="number" min="0" max="999999999" step="0.001" defaultValue="0" required /></div>
+          <ProductPhotoInput />
         </>}
         {modal === 'warehouse' && <><Field label="Warehouse name" name="name" required maxLength={100} /><LocationFields /></>}
         {modal === 'supplier' && <>

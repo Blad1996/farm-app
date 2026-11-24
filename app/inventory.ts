@@ -1,4 +1,4 @@
-export type Product = { id: string; name: string; sku: string; category: string; unit: string; minimum: number };
+export type Product = { id: string; name: string; sku: string; category: string; unit: string; minimum: number; photo_path?: string | null };
 export type Warehouse = { id: string; name: string; location: string };
 export type Supplier = { id: string; name: string; company_name: string; email: string; phone: string; physical_address: string; location: string };
 export type Lot = { id: string; product_id: string; code: string; expires_on: string | null; supplier_id: string | null };
