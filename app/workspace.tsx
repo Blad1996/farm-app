@@ -272,7 +272,7 @@ export default function Workspace() {
             <MovementTable data={data} rows={data.movements.slice(0, 5)} /></section>
         </>}
         {view !== 'overview' && <div className="search"><Search size={18} /><input type="search" aria-label="Filter records" placeholder="Search records…" value={query} onChange={event => setQuery(event.target.value)} /></div>}
-        {view === 'purchases' && <PurchaseOrders companyId={company?.id ?? null} inventory={data} query={query} refreshInventory={async () => {
+        {view === 'purchases' && <PurchaseOrders companyId={company?.id ?? null} inventory={data} query={query} onSetup={open} refreshInventory={async () => {
           if (company) setData(await loadCompany(company.id));
         }} />}
         {view === 'inventory' && <>

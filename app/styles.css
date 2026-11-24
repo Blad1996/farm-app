@@ -3,7 +3,8 @@
 body { margin: 0; background: var(--canvas); color: var(--ink); font: 16px/1.45 "Geist", "Inter", "Segoe UI", system-ui, sans-serif; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
-button:disabled { cursor: wait; opacity: .65; }
+button:disabled { cursor: not-allowed; opacity: .65; }
+button[aria-busy="true"] { cursor: progress; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #568b68; outline-offset: 3px; }
 h1, h2, p { margin: 0; }
 h1 { font-size: clamp(1.8rem, 3vw, 2.55rem); letter-spacing: -.055em; line-height: 1.13; }
@@ -118,6 +119,8 @@ fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
 .purchase-notes { padding: 0 20px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .purchase-dialog { width: min(680px, calc(100vw - 32px)); }
 .purchase-line { padding: 14px; margin: 12px 0; border: 1px solid #dce5de; border-radius: 8px; }
+.purchase-setup { display: grid; gap: 12px; margin-top: 18px; }
+.purchase-setup-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .form-actions { justify-content: flex-end; margin-top: 6px; }
 .error { color: #9b2c26; font-size: .88rem; margin: 4px 0 12px; }

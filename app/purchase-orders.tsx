@@ -36,8 +36,9 @@ function PurchaseDialog({ title, close, children }: { title: string; close: () =
   </dialog>;
 }
 
-export default function PurchaseOrders({ companyId, inventory, query, refreshInventory }: {
+export default function PurchaseOrders({ companyId, inventory, query, refreshInventory, onSetup }: {
   companyId: string | null; inventory: Inventory; query: string; refreshInventory: () => Promise<void>;
+  onSetup: (kind: 'supplier' | 'warehouse' | 'product') => void;
 }) {
   const [snapshot, setSnapshot] = useState<Snapshot>({ orders: [], can_manage: false });
   const [loading, setLoading] = useState(true);
@@ -131,12 +132,18 @@ export default function PurchaseOrders({ companyId, inventory, query, refreshInv
   if (loading) return <section className="panel"><p className="empty" role="status">Loading purchase orders…</p></section>;
   if (loadError) return <section className="panel purchase-empty"><h2>Purchase orders unavailable</h2><p role="alert">{loadError}</p><button className="button secondary" onClick={() => setRevision(revision + 1)}>Try again</button></section>;
   const canCreate = Boolean(inventory.products.length && inventory.suppliers.length && inventory.warehouses.length);
+  const missing = [
+    { kind: 'supplier' as const, label: 'supplier', count: inventory.suppliers.length },
+    { kind: 'warehouse' as const, label: 'warehouse', count: inventory.warehouses.length },
+    { kind: 'product' as const, label: 'product', count: inventory.products.length },
+  ].filter(item => !item.count);
 
   return <>
     <div className="purchase-toolbar"><div><strong>{openOrders.length} open {openOrders.length === 1 ? 'order' : 'orders'}</strong><p>Receipts update stock only after an order is confirmed.</p></div>
       <div className="actions"><button className="button secondary" disabled={busy} onClick={() => setRevision(revision + 1)}><RefreshCw size={16} />Refresh</button>
-        {snapshot.can_manage && <button className="button" disabled={busy || !canCreate} onClick={beginCreate}><Plus size={17} />Create purchase order</button>}</div></div>
-    {!canCreate && <p className="notice">Add a supplier, a warehouse, and at least one product before creating a purchase order.</p>}
+        {snapshot.can_manage && <button className="button" disabled={busy} aria-busy={busy} onClick={beginCreate}><Plus size={17} />{busy ? 'Saving…' : 'Create purchase order'}</button>}</div></div>
+    {!canCreate && <div className="notice"><div><strong>Complete your purchase order setup</strong><p>Add the missing records below before placing your first order.</p>
+      <div className="actions">{missing.map(item => <button key={item.kind} type="button" className="button secondary small" disabled={busy} onClick={() => onSetup(item.kind)}>Add {item.label}</button>)}</div></div></div>}
     {notice && <p className="notice" role="status">{notice}</p>}
     <label className="field purchase-filter"><span>Status</span><select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">All statuses</option>
       {Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -161,7 +168,11 @@ export default function PurchaseOrders({ companyId, inventory, query, refreshInv
         <td>{product(selected.lines.find(line => line.id === receipt.line_id)?.product_id || '')?.name || 'Unknown product'}</td><td>{receipt.lot_code}</td><td>{number.format(receipt.quantity)}</td><td>{receipt.expires_on ? displayDate(receipt.expires_on) : '—'}</td><td>{displayDate(receipt.created_at)}</td><td>{receipt.reference}</td></tr>)}</tbody></table></div> : <p className="empty">No receipts recorded.</p>}
     </section>}
 
-    {(createId || action) && <PurchaseDialog title={createId ? 'Create purchase order' : action?.kind === 'receive' ? `Receive ${orderNumber(action.order)}` : action?.kind === 'confirm' ? 'Confirm purchase order' : 'Cancel purchase order'} close={closeModal}>
+    {(createId || action) && <PurchaseDialog title={createId ? canCreate ? 'Create purchase order' : 'Set up purchase orders' : action?.kind === 'receive' ? `Receive ${orderNumber(action.order)}` : action?.kind === 'confirm' ? 'Confirm purchase order' : 'Cancel purchase order'} close={closeModal}>
+      {createId && !canCreate ? <><p>A purchase order needs a supplier, a receiving warehouse, and at least one product. You still need to add:</p>
+        <div className="purchase-setup">{missing.map(item => <div className="purchase-setup-row" key={item.kind}><span>No {item.label} added yet</span>
+          <button type="button" className="button secondary small" onClick={() => { setCreateId(''); onSetup(item.kind); }}>Add {item.label}</button></div>)}</div>
+        <div className="form-actions"><button type="button" className="button secondary" onClick={closeModal}>Back</button></div></> :
       <form onSubmit={save}><fieldset disabled={busy}>
         {createId && <>
           <div className="form-grid"><label className="field"><span>Supplier</span><select name="supplier" required defaultValue=""><option value="">Select supplier</option>{inventory.suppliers.map(item => <option key={item.id} value={item.id}>{item.company_name || item.name}</option>)}</select></label>
@@ -190,8 +201,8 @@ export default function PurchaseOrders({ companyId, inventory, query, refreshInv
           <label className="field"><span>Delivery reference</span><input name="reference" maxLength={150} /></label><p>Save each lot separately. Stock and outstanding quantities update together.</p>
         </>}
       </fieldset>{formError && <p className="error" role="alert">{formError}</p>}
-        <div className="form-actions"><button type="button" className="button secondary" disabled={busy} onClick={closeModal}>Back</button><button className="button" disabled={busy}>{busy ? 'Saving…' : createId ? 'Save draft' : action?.kind === 'receive' ? 'Save receipt' : action?.kind === 'confirm' ? 'Confirm order' : 'Cancel order'}</button></div>
-      </form>
+        <div className="form-actions"><button type="button" className="button secondary" disabled={busy} onClick={closeModal}>Back</button><button className="button" disabled={busy} aria-busy={busy}>{busy ? 'Saving…' : createId ? 'Save draft' : action?.kind === 'receive' ? 'Save receipt' : action?.kind === 'confirm' ? 'Confirm order' : 'Cancel order'}</button></div>
+      </form>}
     </PurchaseDialog>}
   </>;
 }
