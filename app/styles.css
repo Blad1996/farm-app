@@ -129,6 +129,14 @@ fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
 .product-thumbnail { position: relative; display: grid; place-items: center; width: 52px; height: 52px; background: #edf3ee; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .product-thumbnail img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .product-photo-preview { display: block; max-width: 100%; width: 220px; max-height: 220px; object-fit: contain; margin: 12px 0; border: 1px solid var(--line); border-radius: 8px; }
+.farm-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; margin: 16px 0; }
+.farm-filters .field { flex: 1 1 180px; }
+.farm-totals { display: flex; flex-wrap: wrap; gap: 14px; margin: 18px 0; }
+.farm-totals .panel { padding: 18px; flex: 1 1 180px; display: grid; gap: 8px; }
+.farm-totals strong { font-size: 1.5rem; }
+.farm-notification-settings { padding: 22px; margin: 18px 0; display: grid; gap: 16px; }
+.farm-checkboxes { display: grid; gap: 12px; margin: 16px 0; }
+.farm-checkboxes label { display: flex; gap: 10px; align-items: center; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .form-actions { justify-content: flex-end; margin-top: 6px; }
 .error { color: #9b2c26; font-size: .88rem; margin: 4px 0 12px; }

@@ -33,6 +33,7 @@ Las pruebas locales ejecutan las migraciones en PostgreSQL con identidades simul
 - Dashboard con métricas, alertas visuales y actividad reciente.
 - Catálogo de productos con SKU, categoría, unidad y stock mínimo.
 - Importación de productos desde CSV con plantilla, vista previa, validación y guardado de todo el lote en una transacción. Fotos privadas por producto, con subida al crearlo y opciones para reemplazarlas o retirarlas desde el catálogo.
+- **Crops**, **Irrigation**, **Seed Distribution**, **Farm Expenses**, **Vehicles & Machinery** y **Notifications** para operaciones agrícolas, pagos y mantenimiento. Las alertas aparecen también en Overview. El envío de correos queda deshabilitado mientras se concreta su autorización y configuración.
 - Almacenes y proveedores. Los proveedores se pueden vincular al recibir lotes.
 - Los proveedores incluyen nombre de empresa, teléfono, dirección física y ubicación mediante las listas de país, provincia/estado y ciudad. Para habilitar esos campos en una base existente, aplica `supabase/migrations/20261124010000_supplier_details.sql` después de las migraciones anteriores. Los proveedores existentes se conservan.
 - **Purchase Orders:** pedidos de varios productos con proveedor, almacén receptor, fecha esperada, moneda, cantidades, precios unitarios y notas. Borrador, confirmación, recepción parcial/completa y cancelación de cantidades pendientes. Las recepciones por lote generan entradas de inventario y conservan un historial con vencimientos y referencias.
@@ -60,6 +61,24 @@ En **Inventory → Import CSV**, descarga la plantilla `public/templates/product
 Puedes elegir una foto en **Add product** o usar **Add photo / Change photo** en el catálogo. La app valida el formato del archivo, limita la entrada a 24 megapíxeles y vuelve a codificar la imagen con un lado máximo de 1600 píxeles antes de subirla. No se aceptan SVG ni archivos animados GIF. Las fotos se guardan bajo rutas de empresa y producto; solo los administradores con MFA pueden cambiarlas. Los miembros de esa empresa con MFA pueden verlas mediante enlaces firmados de cinco minutos, que la interfaz renueva mientras está abierta. Las referencias anteriores se retiran antes de intentar borrar el archivo viejo mediante la API de Storage; la política impide borrar una foto todavía vinculada. No se importan enlaces de fotos desde CSV. Si el producto se guarda pero falla la foto, la app lo indica y permite reintentar la foto desde el catálogo.
 
 Las pruebas locales cubren parsing CSV, transacciones de importación, reintentos, validación de metadatos, acceso por empresa, roles, MFA y políticas de Storage. Simulan el esquema de metadatos de Storage en PostgreSQL: no sustituyen una prueba real de subida/descarga en tu proyecto Supabase. Se requiere aplicar la migración y probar las transferencias con una cuenta real. Referencia: [control de acceso de Supabase Storage](https://supabase.com/docs/guides/storage/security/access-control).
+
+## Operaciones agrícolas
+
+Aplica `supabase/migrations/20261126000000_farm_operations.sql` después de las migraciones existentes. Conserva el catálogo y los movimientos anteriores. Las nuevas tablas exigen MFA y pertenencia a la empresa; solo un administrador puede registrar o editar operaciones agrícolas. Los operadores pueden consultarlas. Las operaciones llevan un ID de petición para evitar duplicados al reintentar.
+
+- **Crops:** nombre, tipo, variedad, parcela, superficie en hectáreas/acres/m², fechas de siembra y cosecha esperada, estado y notas. Permite actualizar los datos y el estado.
+- **Irrigation:** planificación, método, litros, duración, estado y dinero realmente pagado. Una actividad planificada se puede completar o cancelar. Completarla registra su pago en gastos, una sola vez. Los registros completados se conservan como historial.
+- **Seed Distribution:** cultivo destinatario, producto, almacén, lote, cantidad, fecha y equipo/persona receptora. Descuenta stock mediante una salida de inventario y conserva su vínculo con el lote. Bloquea lotes vencidos y cantidades insuficientes. El registro, la salida y el pago se confirman o revierten juntos.
+- **Farm Expenses:** pagos manuales y los pagos derivados de riego, semillas, compra de equipos y mantenimiento. Filtros por cultivo, equipo y fechas. Los totales se calculan por moneda; no hay conversión ni suma de monedas distintas. No introduzcas de nuevo pagos ya registrados automáticamente. Estos importes son declaraciones de pagos reales, no una conexión bancaria ni una valoración contable del inventario.
+- **Vehicles & Machinery:** registro de vehículos y maquinaria, tipo, matrícula/serie, marca/modelo, estado, importe pagado al comprar, intervalo y siguiente fecha de mantenimiento. Cuenta activos no retirados por categoría. Los pagos de compra existentes son inmutables; registra pagos adicionales por separado en Farm Expenses.
+- **Maintenance:** historial de servicios, proveedor, trabajo realizado, pago y próxima fecha. El servicio más reciente actualiza el calendario del activo; un servicio histórico no reemplaza una fecha posterior ya registrada.
+- **Notifications:** alertas vencidas y próximas, anticipación de 1–90 días y zona horaria de la finca (por defecto America/Caracas). Permite preparar destinatarios y preferencias, pero no envía correo. Las alertas internas no requieren que Gmail esté conectado.
+
+### Gmail: pendiente de autorización
+
+La integración prevista utiliza Gmail y requiere concretar los destinatarios y el contenido autorizado. Esta versión **no incluye un transporte SMTP, un endpoint de envío ni una tarea cron**. No se ha conectado ninguna cuenta ni enviado mensajes. Las tablas de conexión/entrega son preparación de datos, sin mecanismo de envío activo; las contraseñas no se piden en la interfaz actual.
+
+Propuesta para revisar: resumen de recordatorios con nombre del cultivo o activo, tipo de aviso, fecha prevista y estado próximo/vencido, sin importes, contraseñas ni existencias. El destinatario debe indicarse expresamente. Después de autorizarlo, la conexión se prepararía con una contraseña de aplicación de Google introducida dentro de la app, cifrado del secreto en el servidor, controles de administrador/MFA, prueba explícita y registro de entregas. La automatización requeriría configurar el programador y sus secretos en el despliegue. Las referencias son [contraseñas de aplicación de Google](https://support.google.com/mail/answer/185833?hl=en) y [SMTP seguro en Nodemailer](https://nodemailer.com/smtp).
 
 ## Verificación
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Boxes, CalendarDays, CircleHelp,
-  Clock3, Download, LayoutDashboard, Leaf, LogOut, Menu, Package, Plus, Search, ShoppingCart, Truck, Upload, Warehouse, X } from 'lucide-react';
+  Bell, Clock3, Download, Droplets, LayoutDashboard, Leaf, LogOut, Menu, Package, Plus, Search, ShoppingCart, Sprout, Tractor, Truck, Upload, Wallet, Warehouse, X } from 'lucide-react';
 import { applyDemoMovement, dashboard, day, daysFromNow, displayDate, emptyInventory, makeDemo, movementLabels,
   number, units, type Inventory, type MoveInput, type Movement, type MovementKind, type Product } from './inventory';
 import { supabase } from './supabase';
@@ -11,6 +11,9 @@ import { SignIn } from './auth';
 import LocationFields from './location-fields';
 import PurchaseOrders from './purchase-orders';
 import ProductCsvImport from './product-csv-import';
+import FarmOperations from './farm-operations';
+import FarmAlertSummary from './farm-alert-summary';
+import type { FarmView } from './farm-types';
 import { ProductPhotoDialog, ProductPhotoInput, ProductThumbnail, prepareProductPhoto, uploadProductPhoto, useProductPhotoUrls } from './product-photos';
 
 const navigation = [
@@ -20,6 +23,12 @@ const navigation = [
   { label: 'Warehouses', icon: Warehouse, id: 'warehouses' },
   { label: 'Suppliers', icon: Truck, id: 'suppliers' },
   { label: 'Purchase Orders', icon: ShoppingCart, id: 'purchases' },
+  { label: 'Crops', icon: Sprout, id: 'crops' },
+  { label: 'Irrigation', icon: Droplets, id: 'irrigation' },
+  { label: 'Seed Distribution', icon: Leaf, id: 'seeds' },
+  { label: 'Farm Expenses', icon: Wallet, id: 'expenses' },
+  { label: 'Vehicles & Machinery', icon: Tractor, id: 'assets' },
+  { label: 'Notifications', icon: Bell, id: 'notifications' },
 ] as const;
 type View = typeof navigation[number]['id'];
 type Modal = 'movement' | 'product' | 'warehouse' | 'supplier' | 'help';
@@ -47,6 +56,7 @@ export default function Workspace() {
   const [photoProduct, setPhotoProduct] = useState<Product | null>(null);
   const photoUrls = useProductPhotoUrls(data.products);
   const userId = session?.user.id;
+  const farmView = ['crops', 'irrigation', 'seeds', 'expenses', 'assets', 'notifications'].includes(view);
 
   useEffect(() => {
     if (!supabase) {
@@ -223,6 +233,12 @@ export default function Workspace() {
     warehouses: ['Warehouses', 'Manage the locations where inventory is stored.'],
     suppliers: ['Suppliers', 'Keep supplier contacts linked to incoming lots.'],
     purchases: ['Purchase Orders', 'Order from suppliers and receive deliveries into inventory.'],
+    crops: ['Crops', 'Manage crops, plots, planting dates and expected harvests.'],
+    irrigation: ['Irrigation', 'Plan watering and record water use and payments.'],
+    seeds: ['Seed Distribution', 'Allocate seed lots to crops and deduct stock safely.'],
+    expenses: ['Farm Expenses', 'Review actual payments by crop, asset and currency.'],
+    assets: ['Vehicles & Machinery', 'Track assets, service history and maintenance dates.'],
+    notifications: ['Notifications', 'Review farm reminders and notification preferences.'],
   };
   const modalTitles = { movement: 'Record movement', product: 'Add product', warehouse: 'Add warehouse', supplier: 'Add supplier', help: 'Getting started' };
   const movementRows = data.movements.filter(move => {
@@ -257,11 +273,12 @@ export default function Workspace() {
           <div className="actions">{view === 'inventory' && <>
             <button className="button secondary" onClick={() => setImportOpen(true)}><Upload size={17} />Import CSV</button>
             <button className="button secondary" onClick={downloadInventory}><Download size={17} />Export CSV</button></>}
-            {view !== 'purchases' && <button className="button" onClick={() => open(view === 'inventory' ? 'product' : view === 'warehouses' ? 'warehouse' : view === 'suppliers' ? 'supplier' : 'movement')}>
+            {view !== 'purchases' && !farmView && <button className="button" onClick={() => open(view === 'inventory' ? 'product' : view === 'warehouses' ? 'warehouse' : view === 'suppliers' ? 'supplier' : 'movement')}>
               <Plus size={19} />{view === 'inventory' ? 'Add product' : view === 'warehouses' ? 'Add warehouse' : view === 'suppliers' ? 'Add supplier' : 'Record movement'}</button>}</div></header>
         {notice && <div className="notice" role="status">{notice}<button className="icon-button" aria-label="Dismiss notice" onClick={() => setNotice('')}><X size={16} /></button></div>}
 
         {view === 'overview' && <>
+          <FarmAlertSummary companyId={company?.id ?? null} open={() => go('notifications')} />
           <div className="metrics">
             <Metric icon={<Package size={20} />} label="Tracked products" value={data.products.length} detail="Product catalogue" />
             <Metric icon={<Boxes size={20} />} label="Low-stock products" value={stats.low.length} detail="At or below minimum" tone="amber" />
@@ -287,6 +304,9 @@ export default function Workspace() {
             <MovementTable data={data} rows={data.movements.slice(0, 5)} /></section>
         </>}
         {view !== 'overview' && <div className="search"><Search size={18} /><input type="search" aria-label="Filter records" placeholder="Search records…" value={query} onChange={event => setQuery(event.target.value)} /></div>}
+        {farmView && <FarmOperations companyId={company?.id ?? null} inventory={data} view={view as FarmView} query={query} refreshInventory={async () => {
+          if (company) setData(await loadCompany(company.id));
+        }} />}
         {view === 'purchases' && <PurchaseOrders companyId={company?.id ?? null} inventory={data} query={query} onSetup={open} refreshInventory={async () => {
           if (company) setData(await loadCompany(company.id));
         }} />}
