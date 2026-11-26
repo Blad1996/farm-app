@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { ArrowDownLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, Boxes, CalendarDays, CircleHelp,
-  Bell, Clock3, Download, Droplets, LayoutDashboard, Leaf, LogOut, Menu, Package, Plus, Search, ShoppingCart, Sprout, Tractor, Truck, Upload, Wallet, Warehouse, X } from 'lucide-react';
+  Bell, Clock3, Download, Droplets, LayoutDashboard, Leaf, LogOut, Menu, Package, Palette, Plus, Search, ShoppingCart, Sprout, Tractor, Truck, Upload, Wallet, Warehouse, X } from 'lucide-react';
 import { applyDemoMovement, dashboard, day, daysFromNow, displayDate, emptyInventory, makeDemo, movementLabels,
   number, units, type Inventory, type MoveInput, type Movement, type MovementKind, type Product } from './inventory';
 import { supabase } from './supabase';
@@ -14,6 +14,7 @@ import ProductCsvImport from './product-csv-import';
 import FarmOperations from './farm-operations';
 import FarmAlertSummary from './farm-alert-summary';
 import type { FarmView } from './farm-types';
+import CompanyAppearanceSettings, { CompanyBrand, ThemeToggle, useCompanyAppearance } from './company-appearance';
 import { ProductPhotoDialog, ProductPhotoInput, ProductThumbnail, prepareProductPhoto, uploadProductPhoto, useProductPhotoUrls } from './product-photos';
 
 const navigation = [
@@ -29,6 +30,7 @@ const navigation = [
   { label: 'Farm Expenses', icon: Wallet, id: 'expenses' },
   { label: 'Vehicles & Machinery', icon: Tractor, id: 'assets' },
   { label: 'Notifications', icon: Bell, id: 'notifications' },
+  { label: 'Company Appearance', icon: Palette, id: 'appearance' },
 ] as const;
 type View = typeof navigation[number]['id'];
 type Modal = 'movement' | 'product' | 'warehouse' | 'supplier' | 'help';
@@ -55,6 +57,7 @@ export default function Workspace() {
   const [importOpen, setImportOpen] = useState(false);
   const [photoProduct, setPhotoProduct] = useState<Product | null>(null);
   const photoUrls = useProductPhotoUrls(data.products);
+  const companyAppearance = useCompanyAppearance(company?.id ?? null);
   const userId = session?.user.id;
   const farmView = ['crops', 'irrigation', 'seeds', 'expenses', 'assets', 'notifications'].includes(view);
 
@@ -239,6 +242,7 @@ export default function Workspace() {
     expenses: ['Farm Expenses', 'Review actual payments by crop, asset and currency.'],
     assets: ['Vehicles & Machinery', 'Track assets, service history and maintenance dates.'],
     notifications: ['Notifications', 'Review farm reminders and notification preferences.'],
+    appearance: ['Company Appearance', 'Personalize your company logo, colors, typography and theme.'],
   };
   const modalTitles = { movement: 'Record movement', product: 'Add product', warehouse: 'Add warehouse', supplier: 'Add supplier', help: 'Getting started' };
   const movementRows = data.movements.filter(move => {
@@ -249,11 +253,11 @@ export default function Workspace() {
 
   return <div className="shell">
     <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
-      <Brand />
+      <CompanyBrand controller={companyAppearance} companyName={company?.name || data.name} />
       <div className="workspace-name"><div className="workspace-mark"><Warehouse size={17} /></div><div><strong>{data.name}</strong><span>{supabase ? 'Inventory workspace' : 'Sample data'}</span></div></div>
       <nav aria-label="Workspace"><p className="nav-label">Workspace</p>{navigation.map(({ id, label, icon: Icon }) =>
         <button key={id} aria-current={view === id ? 'page' : undefined} className={view === id ? 'active' : ''} onClick={() => go(id)}><Icon size={19} />{label}</button>)}</nav>
-      <div className="sidebar-footer"><button onClick={() => open('help')}><CircleHelp size={18} />{supabase ? 'Getting started' : 'About this demo'}</button>
+      <div className="sidebar-footer"><ThemeToggle /><button onClick={() => open('help')}><CircleHelp size={18} />{supabase ? 'Getting started' : 'About this demo'}</button>
         <div className="profile"><span className="avatar">{session?.user.email?.slice(0, 2).toUpperCase() ?? 'DM'}</span>
           <div><strong>{session?.user.email ?? 'Demo user'}</strong><span>{supabase ? 'Signed in' : 'Local workspace'}</span></div>
           {supabase && <button className="icon-button logout" title="Sign out" aria-label="Sign out" onClick={async () => {
@@ -273,7 +277,7 @@ export default function Workspace() {
           <div className="actions">{view === 'inventory' && <>
             <button className="button secondary" onClick={() => setImportOpen(true)}><Upload size={17} />Import CSV</button>
             <button className="button secondary" onClick={downloadInventory}><Download size={17} />Export CSV</button></>}
-            {view !== 'purchases' && !farmView && <button className="button" onClick={() => open(view === 'inventory' ? 'product' : view === 'warehouses' ? 'warehouse' : view === 'suppliers' ? 'supplier' : 'movement')}>
+            {view !== 'purchases' && view !== 'appearance' && !farmView && <button className="button" onClick={() => open(view === 'inventory' ? 'product' : view === 'warehouses' ? 'warehouse' : view === 'suppliers' ? 'supplier' : 'movement')}>
               <Plus size={19} />{view === 'inventory' ? 'Add product' : view === 'warehouses' ? 'Add warehouse' : view === 'suppliers' ? 'Add supplier' : 'Record movement'}</button>}</div></header>
         {notice && <div className="notice" role="status">{notice}<button className="icon-button" aria-label="Dismiss notice" onClick={() => setNotice('')}><X size={16} /></button></div>}
 
@@ -303,7 +307,8 @@ export default function Workspace() {
             <button className="button secondary small" onClick={() => go('movements')}>View all</button></div>
             <MovementTable data={data} rows={data.movements.slice(0, 5)} /></section>
         </>}
-        {view !== 'overview' && <div className="search"><Search size={18} /><input type="search" aria-label="Filter records" placeholder="Search records…" value={query} onChange={event => setQuery(event.target.value)} /></div>}
+        {view !== 'overview' && view !== 'appearance' && <div className="search"><Search size={18} /><input type="search" aria-label="Filter records" placeholder="Search records…" value={query} onChange={event => setQuery(event.target.value)} /></div>}
+        {view === 'appearance' && <CompanyAppearanceSettings companyId={company?.id ?? null} companyName={company?.name || data.name} controller={companyAppearance} />}
         {farmView && <FarmOperations companyId={company?.id ?? null} inventory={data} view={view as FarmView} query={query} refreshInventory={async () => {
           if (company) setData(await loadCompany(company.id));
         }} />}

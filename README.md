@@ -90,6 +90,14 @@ La cola evita repetir el resumen diario de una empresa. Un resultado SMTP ambigu
 
 Las pruebas usan PostgreSQL local y datos sintéticos, sin conexiones SMTP ni envío real. La prueba de entrega real requiere una cuenta conectada y la acción explícita del usuario. Referencias: [contraseñas de aplicación de Google](https://support.google.com/mail/answer/185833?hl=en), [SMTP seguro en Nodemailer](https://nodemailer.com/smtp) y [Vercel Cron](https://vercel.com/docs/cron-jobs).
 
+## Company Appearance y modo oscuro
+
+Aplica `supabase/migrations/20261126020000_company_appearance.sql` después de las migraciones anteriores. Crea la configuración por empresa y el bucket privado `company-logos`. En **Company Appearance**, los administradores pueden subir o quitar el logo, cambiar el nombre mostrado, lema, colores principal y lateral, familia y tamaño de letra, esquinas y tema predeterminado. La vista previa permite revisar los cambios antes de guardarlos. Los cambios de colores no eliminan el logo.
+
+El botón **Dark mode / Light mode** de la barra lateral funciona de inmediato y recuerda la preferencia en ese navegador. En **This browser** también puedes seguir el dispositivo o el valor de la empresa. Guardar la apariencia restablece este navegador al valor de la empresa; los demás usuarios conservan sus preferencias. Sin la nueva migración puedes alternar el tema, pero no guardar la personalización de empresa.
+
+Los logos admiten JPG, PNG y WebP de hasta 5 MB y usan la misma validación, reducción y recodificación de las fotos de productos. Los miembros de la empresa con MFA acceden mediante enlaces firmados de cinco minutos; solo los administradores pueden modificarlos. Los logos se muestran dentro del espacio autenticado, después de conocer la empresa. Las fuentes son locales al dispositivo y no se descarga CSS arbitrario. El contraste de los botones y enlaces se adapta al color elegido. Las pruebas locales comprueban permisos y metadatos de Storage; la subida real requiere aplicar la migración y probar con una cuenta de Supabase.
+
 ## Verificación
 
 ```sh
