@@ -81,7 +81,7 @@ test('farm operations keep stock, payments and maintenance schedules consistent'
       assert.equal(data.expenses.filter(expense => expense.source_type === 'asset').length, 1);
     });
     await t.test('notification preferences affect local dates and do not enable sending without Gmail', async () => {
-      const preferences = { id: company, enabled: false, recipients: ['manager@example.test'], lead_days: 14, timezone: 'America/Caracas', maintenance: true, irrigation: true, harvest: false };
+      const preferences = { id: company, enabled: false, recipients: [`${admin}@example.test`], lead_days: 14, timezone: 'America/Caracas', maintenance: true, irrigation: true, harvest: false };
       await save('notifications', preferences); assert.equal((await snapshot()).settings.lead_days, 14);
       await assert.rejects(save('notifications', { ...preferences, enabled: true }), /Connect Gmail/);
       await assert.rejects(save('notifications', { ...preferences, timezone: 'Invalid/Zone' }), /time zone/);

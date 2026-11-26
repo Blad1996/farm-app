@@ -137,6 +137,9 @@ fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
 .farm-notification-settings { padding: 22px; margin: 18px 0; display: grid; gap: 16px; }
 .farm-checkboxes { display: grid; gap: 12px; margin: 16px 0; }
 .farm-checkboxes label { display: flex; gap: 10px; align-items: center; }
+.farm-notification-block { padding: 18px; border: 1px solid var(--line); border-radius: 8px; }
+.farm-notification-block h3 { margin-top: 0; }
+.farm-enable { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .form-actions { justify-content: flex-end; margin-top: 6px; }
 .error { color: #9b2c26; font-size: .88rem; margin: 4px 0 12px; }
